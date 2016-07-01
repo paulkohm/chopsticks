@@ -4,9 +4,10 @@ from copy import copy
 class Chopsticks(object):
 
     def __init__(self):
-        #self.state = [1, 1, 1, 1]
-        self.state = [1, 4, 0, 1]
+        self.state = [1, 1, 1, 1]
+        #self.state = [1, 4, 0, 1]
         self.p1sturn = True
+        self.maxdepth = 6
 
     def show(self):
         showpair.show(self.state)
@@ -14,6 +15,11 @@ class Chopsticks(object):
     def ai(self):
         # Given the current state, and assuming it is the CPU's turn,
         # start the minimax algorithm
+        if (self.state_seed(self.state) == 1111):
+            print ("Matches the initial state, so I'm not going to minimax it.")
+            print ("Just go with qa!")
+            return (0, "qa")
+        
         return(self.minimax(self.state, self.p1sturn, []))
 
     def score(self, state):
@@ -55,6 +61,10 @@ class Chopsticks(object):
             # Loop, so return a 0
             print ("* Loop! Branch terminating.\n")
             return (0, "")
+        
+        if len(seen) > self.maxdepth:
+            print("* maxdepth reached!! Branch Terminating.\n")
+            return(0, '')
         
         newseen = copy(seen)
         newseen.append(seed)
@@ -125,6 +135,7 @@ class Chopsticks(object):
         print ("*** Best move seems to be " + best_move[1])
 
         print ("seed is " + str(self.state_seed(self.state)))
+        self.show()
         
         # If it is a human's turn, prompt them for their move, verify it is a valid move, and change the state
         if self.p1sturn:
