@@ -7,3 +7,5 @@ game AI.
 For starters, I've created a playable terminal-based version of it.
 
 Written in python 3, this requires no external libraries.
+
+No AI yet.
