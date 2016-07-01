@@ -9,3 +9,5 @@ For starters, I've created a playable terminal-based version of it.
 Written in python 3, this requires no external libraries.
 
 No AI yet.
+
+Thanks to http://www.ascii-art.de/ascii/def/finger.txt for the ascii art!
