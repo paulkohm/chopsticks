@@ -79,18 +79,23 @@ class Chopsticks(object):
         moves = []
         scores = []
 
+        # p1 looks for max, and p2 looks for min, so make invalid_score the opposite
+        invalid_score = 20
+
         # Generate list of possible moves for current player
         if (p1sturn):
             moves = ["qa", "qs", "wa", "ws"]
             for hand in [("q", "w"), ("w", "q")]:
                 for i in range(0, state[mapper[hand[0]]]):
                     moves.append(hand[0] + hand[1] + str(i + 1))
+            invalid_score *= -1
         else:
             # p2sturn
             moves = ["aq", "sq", "aw", "sw"]
             for hand in [("a", "s"), ("s", "a")]:
                 for i in range(0, state[mapper[hand[0]]]):
                     moves.append(hand[0] + hand[1] + str(i + 1))
+                    
         print ("If this were AI, this would be the moves:")
         print (moves)
         print ("And this is the seen list")
@@ -109,7 +114,7 @@ class Chopsticks(object):
                 print ("invalid move")
                 print (nextstate[1])
                 print ("* Branch terminating.\n")
-                scores.append(0)
+                scores.append(invalid_score)
                 
         print ("Scores are:")
         print (scores)
