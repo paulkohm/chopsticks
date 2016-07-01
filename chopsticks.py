@@ -18,10 +18,14 @@ class Chopsticks(object):
         else:
             print ("P2", end="")
         move = input ("> ")
-        if (self.testmove(move) > 0):
+        newstate = self.testmove(move)
+        if (newstate[0] > 0):
+            self.state = copy(newstate)
             self.show()
             self.p1sturn = not self.p1sturn
-        self.testwin()
+            self.testwin()
+        else:
+            print (newstate[1])
 
     def testwin(self):
         if self.state[0] + self.state[1] == 0:
@@ -34,7 +38,6 @@ class Chopsticks(object):
         print ("Thx for plzying!!!")
         exit()
             
-
     def testmove(self, move):
         # The internal representation of a move is a two letter combination
         # with an optional number
@@ -83,58 +86,51 @@ class Chopsticks(object):
         # Test 0: Make sure the right player has played
         if self.p1sturn:
             if not (from_hand == 'q' or from_hand == 'w'):
-                print ("It's Player One's turn.")
-                return -3
+                return [-3, "It's Player One's turn."]
         else:
            if not (from_hand == 'a' or from_hand == 's'):
-                print ("It's Player Two's turn.")
-                return -3
+                return [-3, "It's Player Two's turn."]
 
         # Other tests, depending on tap or bump
         if move_type == "tap":
             # Test 1, if "from" hand is zero, error
             if self.state[mapper[from_hand]] == 0:
-                print ("Invalid tap: 'from' hand is zero.")
-                return -1
+                return [-1, "Invalid tap: 'from' hand is zero."]
             
             # Test 2, if "to" hand is zero, error
             if self.state[mapper[to_hand]] == 0:
-                print ("Invalid tap: 'to' hand is zero.")
-                return -1
+                return [-1, "Invalid tap: 'to' hand is zero."]
             
         elif move_type == "bump":
             
             # Test 1: disallow the 1 -> 0 bump
             if (self.state[mapper[from_hand]] + self.state[mapper[to_hand]]) == 1:
-                print ("Invalid bump: bump with only one finger")
-                return -2
+                return [-2, "Invalid bump: bump with only one finger"]
 
             # Test 2: The from hand must be at least one
             if self.state[mapper[from_hand]] == 0:
-                print ("Invalid bump: bump 'from' is zero.")
-                return -2
+                return [-2, "Invalid bump: bump 'from' is zero."]
 
             # Test 3: The from hand must have at least bumped fingers
             if self.state[mapper[from_hand]] < bumped:
-                print ("Invalid bump: Not enough fingers on 'from' hand.")
-                return -2
+                return [-2, "Invalid bump: Not enough fingers on 'from' hand."]
 
             # Test 4: The to hand plus bumped must not be greater than 4
-            if self.state[mapper[to_hand]] + bumped  > 4:
-                print ("Invalid bump: Overflow after bump.")
-                return -2
+            if self.state[mapper[to_hand]] + bumped > 4:
+                return [-2, "Invalid bump: Overflow after bump."]
 
         # Got here, so no errors in move. Calculate and return the newstate
+        newstate = copy(self.state)
         if move_type == "tap":
-            self.state[mapper[to_hand]] += self.state[mapper[from_hand]]
+            newstate[mapper[to_hand]] += newstate[mapper[from_hand]]
         elif move_type == "bump":
-            self.state[mapper[to_hand]] += bumped
-            self.state[mapper[from_hand]] -= bumped
+            newstate[mapper[to_hand]] += bumped
+            newstate[mapper[from_hand]] -= bumped
 
         # Modulo
-        self.state[mapper[to_hand]] = self.state[mapper[to_hand]] % 5
+        newstate[mapper[to_hand]] = newstate[mapper[to_hand]] % 5
 
-        return 1
+        return newstate
                           
 game = Chopsticks()
 game.show()
