@@ -1,6 +1,8 @@
 import showpair
 from copy import copy
 
+DEBUG = False
+
 class Chopsticks(object):
 
     def __init__(self):
@@ -8,6 +10,11 @@ class Chopsticks(object):
         #self.state = [1, 4, 0, 1]
         self.p1sturn = True
         self.maxdepth = 6
+        self.pastmoves = {}
+
+    def debugprint(self, toprint):
+        if DEBUG:
+            print (toprint)
 
     def show(self):
         showpair.show(self.state)
@@ -15,12 +22,31 @@ class Chopsticks(object):
     def ai(self):
         # Given the current state, and assuming it is the CPU's turn,
         # start the minimax algorithm
-        if (self.state_seed(self.state) == 1111):
+        seed = self.state_seed(self.state)
+        seedplusplayer = seed
+        if self.p1sturn:
+            seedplusplayer = str(seed) + "/" + "1"
+        else:
+            seedplusplayer = str(seed) + "/" + "2"
+
+        print ("seedplusplayer is " + seedplusplayer)
+        print ("pastmoves: ")
+        print (self.pastmoves)
+        # Efficiency move: If we've already evaluated this tree, just go with the prior move.
+        if seedplusplayer in self.pastmoves:
+            print ("A game board we've seen before. Bypassing the tree.")
+            print ("Last time we suggested move " + self.pastmoves[seedplusplayer] + "\n")
+        
+        if (seed == 1111):
             print ("Matches the initial state, so I'm not going to minimax it.")
             print ("Just go with qa!")
+            self.pastmoves[seedplusplayer] = "qa"
             return (0, "qa")
-        
-        return(self.minimax(self.state, self.p1sturn, []))
+
+        suggestion = self.minimax(self.state, self.p1sturn, [])
+        self.pastmoves[seedplusplayer] = suggestion[1]
+
+        return(suggestion)
 
     def score(self, state):
         if state[0] + state[1] == 0:
@@ -47,23 +73,27 @@ class Chopsticks(object):
         return int(''.join([str(i) for i in state]))
 
     def minimax(self, state, p1sturn, seen):
-        print ("\ntop of minimax")
-        print (state, p1sturn, seen)
+        # Returns a tuple with (score, move)
+        
+        self.debugprint ("\ntop of minimax")
+        self.debugprint (state)
+        self.debugprint (p1sturn)
+        self.debugprint (seen)
         score = self.score(state)
         if score != 0:
-            print ("* Score is " + str(score) + ". Branch terminating.\n")
+            self.debugprint ("* Score is " + str(score) + ". Branch terminating.\n")
             return (score, "")
 
         seed = self.state_seed(state)
-        print (seed)
+        self.debugprint (seed)
 
         if seed in seen:
             # Loop, so return a 0
-            print ("* Loop! Branch terminating.\n")
+            self.debugprint ("* Loop! Branch terminating.\n")
             return (0, "")
         
         if len(seen) > self.maxdepth:
-            print("* maxdepth reached!! Branch Terminating.\n")
+            self.debugprint("* maxdepth reached!! Branch Terminating.\n")
             return(0, '')
         
         newseen = copy(seen)
@@ -96,30 +126,31 @@ class Chopsticks(object):
                 for i in range(0, state[mapper[hand[0]]]):
                     moves.append(hand[0] + hand[1] + str(i + 1))
                     
-        print ("If this were AI, this would be the moves:")
-        print (moves)
-        print ("And this is the seen list")
-        print (newseen)
+        self.debugprint ("If this were AI, this would be the moves:")
+        self.debugprint (moves)
+        self.debugprint ("And this is the seen list")
+        self.debugprint (newseen)
 
         # Starting to recurse
         for move in moves:
-            print("Trying move " + move + " with state ")
-            print(state)
+            self.debugprint("Trying move " + move + " with state ")
+            self.debugprint(state)
             nextstate = self.testmove(state, move, p1sturn)
             if (nextstate[0] > -1):
-                print ("returned a valid board. recurse on it.")
+                self.debugprint ("returned a valid board. recurse on it.")
                 scores.append(self.minimax(nextstate, not p1sturn, newseen)[0])
             else:
                 # Invalid move, so make score for this one just 0
-                print ("invalid move")
-                print (nextstate[1])
-                print ("* Branch terminating.\n")
+                self.debugprint ("invalid move")
+                self.debugprint (nextstate[1])
+                self.debugprint ("* Branch terminating.\n")
                 scores.append(invalid_score)
                 
         print ("Scores are:")
         print (scores)
         print ("Moves are:")
         print (moves)
+        print ("Best score is " + str(invalid_score * -1))
 
         # Figure out which to return. Return should be the move chosen.
         if (p1sturn):
@@ -129,7 +160,7 @@ class Chopsticks(object):
             
         win_val = win_func(scores)
         win_index = scores.index(win_val)
-        print ("** Done with branch. Best move for current player is " + str(moves[win_index]) + " with value = " + str(win_val) + "\n\n")
+        self.debugprint ("** Done with branch. Best move for current player is " + str(moves[win_index]) + " with value = " + str(win_val) + "\n\n")
         return (win_val, moves[win_index])
 
     def next(self):
@@ -139,7 +170,7 @@ class Chopsticks(object):
         best_move = self.ai()
         print ("*** Best move seems to be " + best_move[1])
 
-        print ("seed is " + str(self.state_seed(self.state)))
+        self.debugprint ("seed is " + str(self.state_seed(self.state)))
         self.show()
         
         # If it is a human's turn, prompt them for their move, verify it is a valid move, and change the state
@@ -253,7 +284,7 @@ class Chopsticks(object):
         if move_type == "tap":
             newstate[mapper[to_hand]] += newstate[mapper[from_hand]]
         elif move_type == "bump":
-            print ("In bump.")
+            self.debugprint ("In bump.")
             newstate[mapper[to_hand]] += bumped
             newstate[mapper[from_hand]] -= bumped
 
