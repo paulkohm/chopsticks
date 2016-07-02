@@ -1,4 +1,6 @@
 import showpair
+import random
+
 from copy import copy
 
 DEBUG = False
@@ -9,8 +11,13 @@ class Chopsticks(object):
         self.state = [1, 1, 1, 1]
         #self.state = [1, 4, 0, 1]
         self.p1sturn = True
-        self.maxdepth = 6
+        self.maxdepth = 7
         self.pastmoves = {}
+
+        # Kludge/global variable just to pass outcome of last minimax back to calling functions
+        # without changing return values necessary for recursion.
+        self.lastscores = []
+        self.lastmoves = []
 
     def debugprint(self, toprint):
         if DEBUG:
@@ -29,13 +36,13 @@ class Chopsticks(object):
         else:
             seedplusplayer = str(seed) + "/" + "2"
 
-        print ("seedplusplayer is " + seedplusplayer)
-        print ("pastmoves: ")
-        print (self.pastmoves)
+        self.debugprint ("seedplusplayer is " + seedplusplayer)
+        self.debugprint ("pastmoves: ")
+        self.debugprint (self.pastmoves)
         # Efficiency move: If we've already evaluated this tree, just go with the prior move.
         if seedplusplayer in self.pastmoves:
-            print ("A game board we've seen before. Bypassing the tree.")
-            print ("Last time we suggested move " + self.pastmoves[seedplusplayer] + "\n")
+            self.debugprint ("A game board we've seen before. Bypassing the tree.")
+            self.debugprint ("Last time we suggested move " + self.pastmoves[seedplusplayer] + "\n")
         
         if (seed == 1111):
             print ("Matches the initial state, so I'm not going to minimax it.")
@@ -72,15 +79,44 @@ class Chopsticks(object):
         # Turns a list into a four digit number reflecting the current state of the board.
         return int(''.join([str(i) for i in state]))
 
+    def strategy_simple_minmax (self, p1sturn, scores):
+        # Strategy routine, so return index of which one to pick from scores
+        # Simple min/max--just pick the highest/lowest value
+        if (p1sturn):
+            win_func = max
+        else:
+            win_func = min
+
+        win_val = win_func(scores)
+        return scores.index(win_val)
+
+    def strategy_random_minmax (self, p1sturn, scores):
+        # Strategy routine, so return index of which one to pick from scores
+        # Min/max, but if tie, randomly choose which one to select
+        if (p1sturn):
+            win_func = max
+        else:
+            win_func = min
+
+        win_val = win_func(scores)
+
+        # Now, use enumerate to pull out all indices that match the win_val
+        all_matching_indices = [i for i,x in enumerate(scores) if x == win_val]
+        
+        return random.choice(all_matching_indices)
+
+
     def minimax(self, state, p1sturn, seen):
         # Returns a tuple with (score, move)
-        
+
+        depth = len(seen)
         self.debugprint ("\ntop of minimax")
         self.debugprint (state)
         self.debugprint (p1sturn)
         self.debugprint (seen)
         score = self.score(state)
         if score != 0:
+            # Move led to a win or loss
             self.debugprint ("* Score is " + str(score) + ". Branch terminating.\n")
             return (score, "")
 
@@ -92,7 +128,7 @@ class Chopsticks(object):
             self.debugprint ("* Loop! Branch terminating.\n")
             return (0, "")
         
-        if len(seen) > self.maxdepth:
+        if depth > self.maxdepth:
             self.debugprint("* maxdepth reached!! Branch Terminating.\n")
             return(0, '')
         
@@ -138,6 +174,7 @@ class Chopsticks(object):
             nextstate = self.testmove(state, move, p1sturn)
             if (nextstate[0] > -1):
                 self.debugprint ("returned a valid board. recurse on it.")
+                self.debugprint (">" * depth + " Trying move " + move + " (oldseed=" + str(seed) + ")")
                 scores.append(self.minimax(nextstate, not p1sturn, newseen)[0])
             else:
                 # Invalid move, so make score for this one just 0
@@ -145,23 +182,21 @@ class Chopsticks(object):
                 self.debugprint (nextstate[1])
                 self.debugprint ("* Branch terminating.\n")
                 scores.append(invalid_score)
-                
-        print ("Scores are:")
-        print (scores)
-        print ("Moves are:")
-        print (moves)
-        print ("Best score is " + str(invalid_score * -1))
+
+        self.lastscores = scores
+        self.lastmoves = moves
+        self.debugprint ("Scores are:")
+        self.debugprint (scores)
+        self.debugprint ("Moves are:")
+        self.debugprint (moves)
+        self.debugprint ("Best score is " + str(invalid_score * -1))
 
         # Figure out which to return. Return should be the move chosen.
-        if (p1sturn):
-            win_func = max
-        else:
-            win_func = min
-            
-        win_val = win_func(scores)
-        win_index = scores.index(win_val)
-        self.debugprint ("** Done with branch. Best move for current player is " + str(moves[win_index]) + " with value = " + str(win_val) + "\n\n")
-        return (win_val, moves[win_index])
+        # Modularizing the way the win is calculated to allow for different strategies
+        win_index = self.strategy_random_minmax(p1sturn, scores)
+
+        self.debugprint ("** Done with branch. Best move for current player is " + str(moves[win_index]) + " with value = " + str(scores[win_index]) + "\n\n")
+        return (scores[win_index], moves[win_index])
 
     def next(self):
         # Play the next turn
@@ -169,6 +204,10 @@ class Chopsticks(object):
         # Just temporary:
         best_move = self.ai()
         print ("*** Best move seems to be " + best_move[1])
+        print ("Final scores list was:")
+        print (self.lastscores)
+        print ("And final moves list was:")
+        print (self.lastmoves)
 
         self.debugprint ("seed is " + str(self.state_seed(self.state)))
         self.show()
@@ -182,7 +221,7 @@ class Chopsticks(object):
         newstate = self.testmove(self.state, move, self.p1sturn)
         if (newstate[0] > -1):
             self.state = copy(newstate)
-            self.show()
+            #self.show()
             self.p1sturn = not self.p1sturn
             self.testwin()
         else:
