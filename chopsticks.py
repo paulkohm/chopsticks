@@ -9,22 +9,93 @@ class Chopsticks(object):
 
     def __init__(self):
         self.state = [1, 1, 1, 1]
-        #self.state = [1, 4, 0, 1]
         self.p1sturn = True
-        self.maxdepth = 7
+        self.maxdepth = 4
         self.pastmoves = {}
+        self.movenumber = 1
+
+        self.p1AI = True
+        self.p2AI = False
+
+        print ("Player One: ", end="")
+        print ("CPU" if self.p1AI else "Human")
+        print ("Player Two: ", end="")
+        print ("CPU" if self.p2AI else "Human")        
 
         # Kludge/global variable just to pass outcome of last minimax back to calling functions
         # without changing return values necessary for recursion.
         self.lastscores = []
         self.lastmoves = []
 
+        input ("Press enter to start.")
+
     def debugprint(self, toprint):
         if DEBUG:
             print (toprint)
 
     def show(self):
+        # Print scoreboard above
+        print ("\n\nMove #" + str(self.movenumber) + ":", end="")
+        print ("Player ", end="")
+        print ("One" if self.p1sturn else "Two")
+
+        # Print hands (current gameboard)
         showpair.show(self.state)
+
+    def next(self):
+        # Play the next turn
+        
+        self.show()
+        self.debugprint ("seed is " + str(self.state_seed(self.state)))
+        move = ""
+
+        # Select next move
+        if (self.p1sturn and self.p1AI) or (not self.p1sturn and self.p2AI):
+            print ("CPU's turn. Thinking.")
+            
+            best_move = self.ai()
+            
+            print ("AI: ", end="")
+            print (self.lastscores, end="")
+            print ("/", end="")
+            print (self.lastmoves, end="")
+            print ("(", end="")
+            print ("+" if self.p1sturn else "-", end="")
+            print (" best)")
+
+            print ("*** Selecting move from among best " + best_move[1])
+
+            move = best_move[1]
+
+            # This pause is only necessary if the maxdepth is so short that there isn't a natural pause.
+            input("Press enter to make CPU move.")
+        else:
+            print ("Human's turn. No AI.")
+            # If it is a human's turn, prompt them for their move, verify it is a valid move, and change the state
+            if self.p1sturn:
+                print ("P1", end="")
+            else:
+                print ("P2", end="")
+                
+            move = input ("> ")
+
+            # Lightweight parsing
+            if (move[0] not in ['q','a','w','s']) or (move[1] not in ['q','a','w','s']):
+                print ("Invalid move.")
+                return -1
+
+        # Try to make the selected move.
+        print ("Trying move: " + move)
+        newstate = self.testmove(self.state, move, self.p1sturn)
+        if (newstate[0] > -1):
+            # Don't iterate movenumber until here, because parse errors and invalid moves shouldn't count.
+            self.movenumber = self.movenumber + 1
+            
+            self.state = copy(newstate)
+            self.p1sturn = not self.p1sturn
+            self.testwin()
+        else:
+            print (newstate[1])
 
     def ai(self):
         # Given the current state, and assuming it is the CPU's turn,
@@ -39,6 +110,7 @@ class Chopsticks(object):
         self.debugprint ("seedplusplayer is " + seedplusplayer)
         self.debugprint ("pastmoves: ")
         self.debugprint (self.pastmoves)
+        
         # Efficiency move: If we've already evaluated this tree, just go with the prior move.
         if seedplusplayer in self.pastmoves:
             self.debugprint ("A game board we've seen before. Bypassing the tree.")
@@ -62,18 +134,6 @@ class Chopsticks(object):
             return 10
         else:
             return 0
-
-    def state_seed2 (self, state):
-        # Returns a compact integer reflecting the current state of the board.
-        # Algorithm: Use prime numbers to encode four slots
-        multipliers = [2, 3, 5, 7]
-        total = 1
-        
-        for x,y in zip(state, multipliers):
-            # Must +1 to convert 0 to 1
-            total = total * (x + 1) * y
-            
-        return total
 
     def state_seed (self, state):
         # Turns a list into a four digit number reflecting the current state of the board.
@@ -198,35 +258,6 @@ class Chopsticks(object):
         self.debugprint ("** Done with branch. Best move for current player is " + str(moves[win_index]) + " with value = " + str(scores[win_index]) + "\n\n")
         return (scores[win_index], moves[win_index])
 
-    def next(self):
-        # Play the next turn
-        
-        # Just temporary:
-        best_move = self.ai()
-        print ("*** Best move seems to be " + best_move[1])
-        print ("Final scores list was:")
-        print (self.lastscores)
-        print ("And final moves list was:")
-        print (self.lastmoves)
-
-        self.debugprint ("seed is " + str(self.state_seed(self.state)))
-        self.show()
-        
-        # If it is a human's turn, prompt them for their move, verify it is a valid move, and change the state
-        if self.p1sturn:
-            print ("P1", end="")
-        else:
-            print ("P2", end="")
-        move = input ("> ")
-        newstate = self.testmove(self.state, move, self.p1sturn)
-        if (newstate[0] > -1):
-            self.state = copy(newstate)
-            #self.show()
-            self.p1sturn = not self.p1sturn
-            self.testwin()
-        else:
-            print (newstate[1])
-
     def testwin(self):
         if self.state[0] + self.state[1] == 0:
             print ("Player Two Wins!!!! Sweg!")
@@ -302,9 +333,9 @@ class Chopsticks(object):
             
         elif move_type == "bump":
             
-            # Test 1: disallow the 1 -> 0 bump
-            if (state[mapper[from_hand]] + state[mapper[to_hand]]) == 1:
-                return [-2, "Invalid bump: bump with only one finger"]
+            # Test 1: Can't bump all fingers from from hand to zero to hand
+            if (state[mapper[from_hand]] == bumped and state[mapper[to_hand]] == 0):
+                return [-2, "Invalid bump: Can't bump all fingers from hand to zero hand."]
 
             # Test 2: The from hand must be at least one
             if state[mapper[from_hand]] == 0:
