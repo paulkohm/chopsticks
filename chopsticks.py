@@ -59,8 +59,8 @@ class Chopsticks(object):
             AIstatus += "+" if self.p1sturn else "-"
             AIstatus += " best)"
 
-            self.debugprint(AIstatus)
-            self.debugprint ("*** Selecting move from among best " + best_move[1])
+            print(AIstatus)
+            print ("*** Selecting move from among best " + best_move[1])
 
             move = best_move[1]
 
@@ -124,6 +124,8 @@ class Chopsticks(object):
         if seedplusplayer in self.pastmoves:
             self.debugprint ("A game board we've seen before. Bypassing the tree.")
             self.debugprint ("Last time we suggested move " + self.pastmoves[seedplusplayer] + "\n")
+            # Disabled for now, because prone to lead to loops
+            # return (0, self.pastmoves[seedplusplayer])
         
         if (seed == 1111):
             print ("Matches the initial state, so I'm not going to minimax it.")
@@ -315,7 +317,7 @@ class Chopsticks(object):
             return [-5, "Invalid move"]
 
         # Test 2: Rest of chars (if any) must be numerals
-        if (len(move) > 2) and not all(c in "01234567890" for c in move):
+        if (len(move) > 2) and not all(c in "01234567890" for c in move[2:]):
             return [-6, "Invalid move"]
 
         # Test 3: Can't have same hand twice
