@@ -54,16 +54,13 @@ class Chopsticks(object):
             print ("CPU's turn. Thinking.")
             
             best_move = self.ai()
-            
-            print ("AI: ", end="")
-            print (self.lastscores, end="")
-            print ("/", end="")
-            print (self.lastmoves, end="")
-            print ("(", end="")
-            print ("+" if self.p1sturn else "-", end="")
-            print (" best)")
 
-            print ("*** Selecting move from among best " + best_move[1])
+            AIstatus = "AI: " + str(self.lastscores) + "/" + str(self.lastmoves) + "("
+            AIstatus += "+" if self.p1sturn else "-"
+            AIstatus += " best)"
+
+            self.debugprint(AIstatus)
+            self.debugprint ("*** Selecting move from among best " + best_move[1])
 
             move = best_move[1]
 
@@ -77,12 +74,24 @@ class Chopsticks(object):
             else:
                 print ("P2", end="")
                 
-            move = input ("> ")
-
-            # Lightweight parsing
-            if (move[0] not in ['q','a','w','s']) or (move[1] not in ['q','a','w','s']):
+            try:
+                move = input ("> ")
+            except EOFError:
                 print ("Invalid move.")
                 return -1
+
+            # Lightweight parsing
+            # This isn't the most readable test, and it probably would've been a bit faster with a regex,
+            # But I didn't want to use another library if I didn't have to
+            # Test: make sure only chars in string are from set qaws and the numerals
+            if (move == "q" or move == "quit" or move == "exit"):
+                print ("Bye!")
+                exit()
+
+            if not all (c in "qaws0123456789" for c in move) or move == "" or len(move) < 2:
+                print ("Invalid move.")
+                return -1
+
 
         # Try to make the selected move.
         print ("Trying move: " + move)
@@ -266,10 +275,15 @@ class Chopsticks(object):
         else:
             return
 
+        print ("Total Moves: " + str(self.movenumber - 1))
+
         print ("Thx for plzying!!!")
         exit()
             
     def testmove(self, state, move, p1sturn):
+        # Main game logic.
+        # Most of the rules of the game are embedded in this routine.
+        
         # The internal representation of a move is a two letter combination
         # with an optional number
         # The letters refer to following square on the keyboard:
@@ -289,6 +303,24 @@ class Chopsticks(object):
 
         # Return value is either a newstate (presumed valid)
         # Or an error code
+
+        # First, some basic structure testing.
+        # Should probably get caught by the parser, but okay to duplicate the tests for robustness
+        # Test 0: Min length
+        if len(move) < 2:
+            return [-4, "Move is too short."]
+
+        # Test 1: First two must be chars in qwas set
+        if (move[0] not in "qwas" or move[1] not in "qwas"):
+            return [-5, "Invalid move"]
+
+        # Test 2: Rest of chars (if any) must be numerals
+        if (len(move) > 2) and not all(c in "01234567890" for c in move):
+            return [-6, "Invalid move"]
+
+        # Test 3: Can't have same hand twice
+        if (move[0] == move[1]):
+            return [-7, "Invalid move"]
 
         # See if the move is a "tap" (against your opponent) or a "bump" (own hand)
         # This is complex given the representation for a move
